@@ -11,27 +11,33 @@ namespace YouRock
     {
         public class Executer
         {
-            public void ExecuteSql(string sqlConnectionString, string tSql)
+            private SqlConnection SQLConnectionMaster { get; set; }
+            private SqlConnection SQLConnection { get; set; }
+            private string DatabaseName { get; set; }
+
+            public Executer(SqlConnection sqlConnectionMaster, SqlConnection sqlConnection, string databaseName)
             {
-                using (NPoco.IDatabase dbContext = new NPoco.Database(sqlConnectionString, NPoco.DatabaseType.SqlServer2012, null))
+                SQLConnectionMaster = sqlConnectionMaster;
+                SQLConnection = sqlConnection;
+                DatabaseName = databaseName;
+            }
+
+            public void ExecuteSql(string tSql)
+            {
+                using (NPoco.IDatabase dbContext = new NPoco.Database(SQLConnection))
                 {
                     dbContext.Execute(tSql);
                 }
             }
 
-            public void ExecuteSqlNormal(string sqlConnectionStringMaster, string tSql)
+            public void ExecuteSqlNormal(string tSql)
             {
-                using (SqlConnection connection = new SqlConnection(sqlConnectionStringMaster))
-                {
-                    connection.Open();
-                    var command = connection.CreateCommand();
-                    command.CommandText = tSql;
-                    command.ExecuteNonQuery();
-                    connection.Close();
-                }
+                SqlCommand command = SQLConnection.CreateCommand();
+                command.CommandText = tSql;
+                command.ExecuteNonQuery();
             }
 
-            public void CreateView(string sqlConnectionStringMaster, string databaseName, string viewName, string tSql)
+            public void CreateView(string viewName, string tSql)
             {
                 string script = string.Format(@"                
                 DECLARE @CreateViewStatement NVARCHAR(MAX) 
@@ -44,12 +50,12 @@ namespace YouRock
                 
                 EXEC(''{0}'')'
                 EXEC (@CreateViewStatement)
-                ", tSql, databaseName, viewName);
+                ", tSql, DatabaseName, viewName);
 
-                ExecuteSqlNormal(sqlConnectionStringMaster, script);
+                ExecuteSqlNormal(script);
             }
 
-            public void CreateStoredProcedure(string sqlConnectionStringMaster, string databaseName, string storedProcedureName, string tSql)
+            public void CreateStoredProcedure(string storedProcedureName, string tSql)
             {
                 string script = string.Format(@"                
                 DECLARE @CreateStoredProcedureStatement NVARCHAR(MAX) 
@@ -62,35 +68,28 @@ namespace YouRock
                 
                 EXEC(''{0}'')'
                 EXEC (@CreateStoredProcedureStatement)
-                ", tSql.Replace("'", "''''"), databaseName, storedProcedureName);
+                ", tSql.Replace("'", "''''"), DatabaseName, storedProcedureName);
 
-                ExecuteSqlNormal(sqlConnectionStringMaster, script);
+                ExecuteSqlNormal(script);
             }
             
-            public bool IsTableExist(string sqlConnectionStringMaster, string databaseName, string tableName)
+            public bool IsTableExist(string tableName)
             {
                 bool exist = false;
 
-                using (SqlConnection connection = new SqlConnection(sqlConnectionStringMaster))
+                var command = SQLConnection.CreateCommand();
+                command.CommandText = "IF OBJECT_ID(N'dbo." + tableName + "', N'U') IS NULL BEGIN SELECT 0 END ELSE BEGIN SELECT 1 END";
+                using (SqlDataReader reader = command.ExecuteReader(CommandBehavior.SingleRow))
                 {
-                    connection.Open();
-
-                    var command = connection.CreateCommand();
-                    command.CommandText = "USE " + databaseName + " IF OBJECT_ID(N'dbo." + tableName + "', N'U') IS NULL BEGIN SELECT 0 END ELSE BEGIN SELECT 1 END";
-                    using (SqlDataReader reader = command.ExecuteReader(CommandBehavior.SingleRow))
+                    if (reader.Read())
                     {
-                        if (reader.Read())
-                        {
-                            string ss = reader[0].ToString();
+                        string ss = reader[0].ToString();
 
-                            if (ss == "1")
-                            {
-                                exist = true;
-                            }
+                        if (ss == "1")
+                        {
+                            exist = true;
                         }
                     }
-
-                    connection.Close();
                 }
 
                 return exist;
@@ -99,6 +98,29 @@ namespace YouRock
 
         public class DatabaseSynchronization
         {
+            private Executer Executer { get; set; }
+            private SqlConnection SQLConnectionMaster { get; set; }
+            private SqlConnection SQLConnection { get; set; }
+            private string DatabaseName { get; set; }
+            private string AgencyCode { get; set; }
+            private DatabaseSyncLogAdapter _databaseSyncLogAdapter { get; set; }
+
+            public DatabaseSynchronization(SqlConnection sqlConnectionMaster, SqlConnection sqlConnection, string databaseName, string agencyCode)
+            {
+                SQLConnectionMaster = sqlConnectionMaster;
+                SQLConnection = sqlConnection;
+                DatabaseName = databaseName;
+                AgencyCode = agencyCode;
+                Executer = new Executer(sqlConnectionMaster, sqlConnection, databaseName);
+                _databaseSyncLogAdapter = new DatabaseSyncLogAdapter(sqlConnectionMaster, sqlConnection, databaseName);
+
+                ExecuteDatabaseCreateScript();
+                ExecuteStoredProcedures();
+                ExecuteChangeScripts();
+                ExecuteInserts();
+                ExecuteViews();
+            }
+
             public class DatabaseSyncLogDto
             {
                 public int DatabaseSyncLogID { get; set; }
@@ -108,14 +130,22 @@ namespace YouRock
 
             public class DatabaseSyncLogAdapter
             {
-                private readonly Executer _executer = new Executer();
-                public DatabaseSyncLogDto GetLastDatabaseSyncLog(string sqlConnectionString, string databaseName)
+                private SqlConnection SQLConnection { get; set; }
+                private Executer Executer { get; set; }
+
+                public DatabaseSyncLogAdapter(SqlConnection sqlConnectionMaster, SqlConnection sqlConnection, string databaseName)
+                {
+                    SQLConnection = sqlConnection;
+                    Executer = new Executer(sqlConnectionMaster, sqlConnection, databaseName);
+                }
+
+                public DatabaseSyncLogDto GetLastDatabaseSyncLog()
                 {
                     DatabaseSyncLogDto databaseSyncLog = null;
 
-                    using (NPoco.IDatabase dbContext = new NPoco.Database(sqlConnectionString, NPoco.DatabaseType.SqlServer2012, null))
+                    using (NPoco.IDatabase dbContext = new NPoco.Database(SQLConnection))
                     {
-                        bool exist = _executer.IsTableExist(sqlConnectionString, databaseName, "tbl_DatabaseSyncLog");
+                        bool exist = Executer.IsTableExist("tbl_DatabaseSyncLog");
                         if (exist)
                         {
                             databaseSyncLog = dbContext.FirstOrDefault<DatabaseSyncLogDto>("SELECT * FROM tbl_DatabaseSyncLog Order By DatabaseSyncLogID Desc");
@@ -125,9 +155,9 @@ namespace YouRock
                     return databaseSyncLog;
                 }
 
-                public DatabaseSyncLogDto InsertDatabaseSyncLog(string sqlConnectionString, DatabaseSyncLogDto databaseSyncLog)
+                public DatabaseSyncLogDto InsertDatabaseSyncLog(DatabaseSyncLogDto databaseSyncLog)
                 {
-                    using (NPoco.IDatabase dbContext = new NPoco.Database(sqlConnectionString, NPoco.DatabaseType.SqlServer2012, null))
+                    using (NPoco.IDatabase dbContext = new NPoco.Database(SQLConnection))
                     {
                         dbContext.Insert("tbl_DatabaseSyncLog", "DatabaseSyncLogID", databaseSyncLog);
                     }
@@ -136,8 +166,6 @@ namespace YouRock
                 }
             }
 
-            private readonly Executer _executer = new Executer();
-            private readonly DatabaseSyncLogAdapter _databaseSyncLogAdapter = new DatabaseSyncLogAdapter();
 
             public List<string> ChangeScripts()
             {
@@ -152,7 +180,7 @@ namespace YouRock
                 return result;
             }
 
-            public List<Tuple<int, string>> InsertScripts(string agencyCode)
+            public List<Tuple<int, string>> InsertScripts()
             {
                 List<Tuple<int, string>> resultTuples = new List<Tuple<int, string>>();
                 string path = AppDomain.CurrentDomain.BaseDirectory;
@@ -162,7 +190,7 @@ namespace YouRock
                 {
                     List<string> fileList = Directory.GetFiles(realPath, "*.sql").ToList();
 
-                    string agencyPath = path + "Database\\Inserts\\" + agencyCode + "\\";
+                    string agencyPath = path + "Database\\Inserts\\" + AgencyCode + "\\";
 
                     if (Directory.Exists(agencyPath))
                     {
@@ -195,7 +223,7 @@ namespace YouRock
                 return resultTuples;
             }
 
-            public List<string> ViewScripts(string agencyCode)
+            public List<string> ViewScripts()
             {
                 string path = AppDomain.CurrentDomain.BaseDirectory;
                 string realPath = path + "Database\\Views\\";
@@ -203,7 +231,7 @@ namespace YouRock
 
                 if (Directory.Exists(realPath))
                 {
-                    string agencyPath = path + "Database\\Views\\" + agencyCode + "\\";
+                    string agencyPath = path + "Database\\Views\\" + AgencyCode + "\\";
 
                     if (Directory.Exists(agencyPath))
                     {
@@ -219,7 +247,7 @@ namespace YouRock
                 return result;
             }
 
-            public List<string> StoredProcedureScripts(string agencyCode)
+            public List<string> StoredProcedureScripts()
             {
                 List<string> result = new List<string>();
                 string path = AppDomain.CurrentDomain.BaseDirectory;
@@ -229,7 +257,7 @@ namespace YouRock
                 {
                     result = Directory.GetFiles(path + "Database\\StoredProcedures\\", "*.sql").ToList();
 
-                    string agencyPath = path + "Database\\StoredProcedures\\" + agencyCode + "\\";
+                    string agencyPath = path + "Database\\StoredProcedures\\" + AgencyCode + "\\";
 
                     if (Directory.Exists(agencyPath))
                     {
@@ -245,29 +273,13 @@ namespace YouRock
                 return result;
             }
 
-            public void Start(string agencyCode, string sqlConnectionStringMaster, string databaseName)
-            {
-                Console.WriteLine("##Database Sync Started");
-                Console.WriteLine(" #Database Sync: Execute Database Create Script");
-                ExecuteDatabaseCreateScript(sqlConnectionStringMaster, databaseName);
-                Console.WriteLine(" #Database Sync: Execute Stored Procedures");
-                ExecuteStoredProcedures(agencyCode, sqlConnectionStringMaster, databaseName);
-                Console.WriteLine(" #Database Sync: Execute Change Scripts");
-                ExecuteChangeScripts(agencyCode, databaseName, sqlConnectionStringMaster);
-                Console.WriteLine(" #Database Sync: Execute Inserts");
-                ExecuteInserts(agencyCode, sqlConnectionStringMaster);
-                Console.WriteLine(" #Database Sync: Execute Views");
-                ExecuteViews(agencyCode, sqlConnectionStringMaster, databaseName);
-                Console.WriteLine("##Database Sync Ended");
-            }
-
-            public void ExecuteDatabaseCreateScript(string sqlConnectionStringMaster, string databaseName)
+            public void ExecuteDatabaseCreateScript()
             {
                 try
                 {
-                    _executer.ExecuteSqlNormal(sqlConnectionStringMaster, "IF db_id('" + databaseName + "') IS NULL BEGIN CREATE DATABASE " + databaseName + " COLLATE SQL_Latin1_General_CP1_CI_AS END");
+                    Executer.ExecuteSqlNormal("IF db_id('" + DatabaseName + "') IS NULL BEGIN CREATE DATABASE " + DatabaseName + " COLLATE SQL_Latin1_General_CP1_CI_AS END");
 
-                    _executer.ExecuteSqlNormal(sqlConnectionStringMaster, string.Format(@"USE {0} IF OBJECT_ID(N'dbo.tbl_DatabaseSyncLog', N'U') IS NULL
+                    Executer.ExecuteSqlNormal(string.Format(@"USE {0} IF OBJECT_ID(N'dbo.tbl_DatabaseSyncLog', N'U') IS NULL
                         BEGIN
                             CREATE TABLE[dbo].[tbl_DatabaseSyncLog](
                             [DatabaseSyncLogID][int] IDENTITY(1, 1) NOT NULL,
@@ -275,7 +287,7 @@ namespace YouRock
                             [DatabaseSyncLogDate][datetime] NOT NULL DEFAULT(GETUTCDATE()),
                                 CONSTRAINT[PK_tbl_DatabaseSyncLog] PRIMARY KEY CLUSTERED([DatabaseSyncLogID] ASC)
                                 WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]) ON[PRIMARY]
-                        END", databaseName));
+                        END", DatabaseName));
                 }
                 catch (Exception ex)
                 {
@@ -284,7 +296,7 @@ namespace YouRock
                 }
             }
 
-            public void ExecuteChangeScripts(string agencyCode, string databaseName, string sqlConnectionStringMaster)
+            public void ExecuteChangeScripts()
             {
                 try
                 {
@@ -305,7 +317,7 @@ namespace YouRock
                                     int changeScriptID;
                                     if (int.TryParse(fileNameArray[1], out changeScriptID))
                                     {
-                                        DatabaseSyncLogDto databaseSyncLog = _databaseSyncLogAdapter.GetLastDatabaseSyncLog(sqlConnectionStringMaster, databaseName);
+                                        DatabaseSyncLogDto databaseSyncLog = _databaseSyncLogAdapter.GetLastDatabaseSyncLog();
 
                                         if (databaseSyncLog == null || changeScriptID > databaseSyncLog.DatabaseSyncLogChangeScriptID)
                                         {
@@ -315,17 +327,17 @@ namespace YouRock
                                                 agencyShortName = fileNameArray[1];
                                             }
 
-                                            if (agencyShortName == agencyCode || agencyShortName == null)
+                                            if (agencyShortName == AgencyCode || agencyShortName == null)
                                             {
-                                                string readText = File.ReadAllText(info.FullName);
+                                                string tSql = File.ReadAllText(info.FullName);
 
-                                                if (!string.IsNullOrWhiteSpace(readText))
+                                                if (!string.IsNullOrWhiteSpace(tSql))
                                                 {
-                                                    readText = "USE " + databaseName + Environment.NewLine + readText;
-                                                    _executer.ExecuteSqlNormal(sqlConnectionStringMaster, readText);
+                                                    tSql = "USE " + DatabaseName + Environment.NewLine + tSql;
+                                                    Executer.ExecuteSqlNormal(tSql);
                                                 }
 
-                                                _databaseSyncLogAdapter.InsertDatabaseSyncLog(sqlConnectionStringMaster, new DatabaseSyncLogDto()
+                                                _databaseSyncLogAdapter.InsertDatabaseSyncLog(new DatabaseSyncLogDto()
                                                 {
                                                     DatabaseSyncLogChangeScriptID = changeScriptID,
                                                     DatabaseSyncLogDate = DateTime.UtcNow
@@ -356,9 +368,9 @@ namespace YouRock
                 }
             }
 
-            public void ExecuteInserts(string agencyCode, string sqlConnectionString)
+            public void ExecuteInserts()
             {
-                IOrderedEnumerable<Tuple<int, string>> insertScripts = InsertScripts(agencyCode).OrderBy(a => a.Item1);
+                IOrderedEnumerable<Tuple<int, string>> insertScripts = InsertScripts().OrderBy(a => a.Item1);
 
                 foreach (Tuple<int, string> insertScript in insertScripts)
                 {
@@ -369,13 +381,13 @@ namespace YouRock
                         {
                             //string fileName = info.Name.Replace(info.Extension, "");
 
-                            string readText = File.ReadAllText(info.FullName);
+                            string tSql = File.ReadAllText(info.FullName);
 
-                            if (!string.IsNullOrWhiteSpace(readText))
+                            if (!string.IsNullOrWhiteSpace(tSql))
                             {
                                 try
                                 {
-                                    _executer.ExecuteSql(sqlConnectionString, readText);
+                                    Executer.ExecuteSql(tSql);
                                 }
                                 catch (Exception ex)
                                 {
@@ -395,11 +407,11 @@ namespace YouRock
                 }
             }
 
-            public void ExecuteViews(string agencyCode, string sqlConnectionStringMaster, string databaseName)
+            public void ExecuteViews()
             {
                 try
                 {
-                    List<string> viewScripts = ViewScripts(agencyCode);
+                    List<string> viewScripts = ViewScripts();
 
                     foreach (string viewScript in viewScripts)
                     {
@@ -411,12 +423,12 @@ namespace YouRock
                             {
                                 string fileName = info.Name.Replace(info.Extension, "");
 
-                                string readText = File.ReadAllText(info.FullName);
-                                readText = readText.Replace("  ", " ");
+                                string tSql = File.ReadAllText(info.FullName);
+                                tSql = tSql.Replace("  ", " ");
 
-                                if (!string.IsNullOrWhiteSpace(readText))
+                                if (!string.IsNullOrWhiteSpace(tSql))
                                 {
-                                    _executer.CreateView(sqlConnectionStringMaster, databaseName, fileName, readText);
+                                    Executer.CreateView(fileName, tSql);
                                 }
                             }
                             else
@@ -436,9 +448,9 @@ namespace YouRock
                 }
             }
 
-            public void ExecuteStoredProcedures(string agencyCode, string sqlConnectionStringMaster, string databaseName)
+            public void ExecuteStoredProcedures()
             {
-                List<string> storedProcedureScripts = StoredProcedureScripts(agencyCode);
+                List<string> storedProcedureScripts = StoredProcedureScripts();
 
                 foreach (string storedProcedureScript in storedProcedureScripts)
                 {
@@ -454,7 +466,7 @@ namespace YouRock
 
                             if (!string.IsNullOrWhiteSpace(readText))
                             {
-                                _executer.CreateStoredProcedure(sqlConnectionStringMaster, databaseName, fileName, readText);
+                                Executer.CreateStoredProcedure(fileName, readText);
                             }
                         }
                         else
