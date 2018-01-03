@@ -482,7 +482,7 @@ namespace YouRock
             }
         }
 
-        public static string BuildConnectionString(string dataSource = null, bool? integratedSecurity = null, string initialCatalog = null, string userID = null, string password = null)
+        public static string BuildConnectionString(string dataSource = null, bool? integratedSecurity = null, string initialCatalog = null, string userID = null, string password = null, bool multipleActiveResultSets = false)
         {
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
 
@@ -510,6 +510,8 @@ namespace YouRock
             {
                 builder.Password = password;
             }
+
+            builder.MultipleActiveResultSets = multipleActiveResultSets;
 
             return builder.ConnectionString;
         }
