@@ -19,7 +19,7 @@ namespace YouRock
 
         public static T Get<T>(this ISession session, string key)
         {
-            object result;
+            object result = null;
 
             if (typeof(T) == typeof(int?) || typeof(T) == typeof(int))
             {
@@ -27,7 +27,11 @@ namespace YouRock
             }
             else
             {
-                result = JsonConvert.DeserializeObject<T>(session.GetString(key));
+                string userJson = session.GetString(key);
+                if (userJson != null)
+                {
+                    result = JsonConvert.DeserializeObject<T>(userJson);
+                }
             }
 
             return (T) result;
