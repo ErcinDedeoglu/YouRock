@@ -27,10 +27,18 @@ namespace YouRock
             }
             else
             {
-                string userJson = session.GetString(key);
-                if (userJson != null)
+                result = session.GetString(key);
+
+                if (result != null && typeof(T) != typeof(string))
                 {
-                    result = JsonConvert.DeserializeObject<T>(userJson);
+                    result = JsonConvert.DeserializeObject<T>((string) result);
+                }
+                else if (typeof(T) == typeof(string))
+                {
+                    if (string.IsNullOrEmpty((string) result))
+                    {
+                        result = null;
+                    }
                 }
             }
 
