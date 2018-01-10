@@ -33,13 +33,13 @@ namespace YouRock
                 {
                     result = JsonConvert.DeserializeObject<T>((string) result);
                 }
-                else if (typeof(T) == typeof(string))
-                {
-                    if (string.IsNullOrEmpty((string) result))
-                    {
-                        result = null;
-                    }
-                }
+                //else if (typeof(T) == typeof(string))
+                //{
+                //    if (string.IsNullOrEmpty((string) result))
+                //    {
+                //        result = null;
+                //    }
+                //}
             }
 
             return (T) result;
