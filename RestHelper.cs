@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -29,7 +30,7 @@ namespace YouRock
 
             public List<DTO.Oanda.InstrumentDto> Instruments()
             {
-                string requestString = ApiURL + "v1/instruments?accountId=" + AccountID;
+                string requestString = "v1/instruments?accountId=" + AccountID;
 
                 string responseString = MakeRequest(requestString);
 
@@ -41,18 +42,35 @@ namespace YouRock
 
             public List<DTO.Oanda.InstrumentDto> Accounts()
             {
-                string responseString = MakeRequest(ApiURL + "v1/accounts");
+                string responseString = MakeRequest("v1/accounts");
 
                 DTO.Oanda.InstrumentDto instrument = JsonConvert.DeserializeObject<DTO.Oanda.InstrumentDto>(responseString);
                 
                 return new List<InstrumentDto>();
             }
 
-            //
+            public CandleDto.Root Candles(string instrument = "EUR_USD", DateTime? startDate = null, int count = 5000, string granularity = "S5")
+            {
+                List<string> parameterList = new List<string>();
+                string startDateStr = string.Empty;
+
+                if (startDate != null)
+                {
+                    parameterList.Add("start=" + ((DateTime)startDate).ToString("yyyy") + "-" + ((DateTime)startDate).ToString("MM") + "-" + ((DateTime)startDate).ToString("dd") + "T" + ((DateTime)startDate).ToString("HH") + "%3A" + ((DateTime)startDate).ToString("mm") + "%3A" + ((DateTime)startDate).ToString("ss") + "Z");
+                }
+
+                parameterList.Add("count=" + count);
+                parameterList.Add("granularity=" + granularity);
+                parameterList.Add("instrument=" + instrument);
+
+                string responseString = MakeRequest("v1/candles?" + string.Join("&", parameterList));
+
+                return JsonConvert.DeserializeObject<DTO.Oanda.CandleDto.Root>(responseString);
+            }
 
             private string MakeRequest(string requestString, string method = "GET", string postData = null)
             {
-                HttpWebRequest request = WebRequest.CreateHttp(requestString);
+                HttpWebRequest request = WebRequest.CreateHttp(ApiURL + requestString);
 
                 // for non-sandbox requests
                 request.Headers.Add("Authorization", "Bearer " + AccessToken);
