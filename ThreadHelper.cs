@@ -16,7 +16,7 @@ namespace YouRock
         {
             Thread bigStackThread = new Thread(() => action(), 1024 * 1024);
             bigStackThread.Start();
-            bigStackThread.Join();
+            //bigStackThread.Join();
         }
     }
 }
