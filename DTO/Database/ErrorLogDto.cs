@@ -1,7 +1,10 @@
 ﻿using System;
+using NPoco;
 
 namespace YouRock.DTO.Database
 {
+    [TableName("tbl_ErrorLog")]
+    [PrimaryKey("ErrorLogID")]
     public class ErrorLogDto
     {
         public int ErrorLogID { get; set; }

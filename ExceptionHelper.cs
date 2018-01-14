@@ -37,9 +37,9 @@ namespace YouRock
                 int lineNumber = ExceptionHelper.LineNumber(ex);
 
                 StackFrame[] stackFrameList = new StackTrace(ex, true).GetFrames();
-                if (stackFrameList != null && stackFrameList.Length > 1)
+                if (stackFrameList != null && stackFrameList.Length > 0)
                 {
-                    MethodBase method = stackFrameList[1].GetMethod();
+                    MethodBase method = stackFrameList[0].GetMethod();
 
                     if (method != null)
                     {
@@ -116,7 +116,7 @@ namespace YouRock
                     }
                 });
             }
-            catch (Exception ex)
+            catch
             {
                 // ignored
             }
