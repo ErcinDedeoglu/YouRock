@@ -88,7 +88,7 @@ namespace YouRock
             }
             else if (timePeriod == TimePeriod.Week)
             {
-                startDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0);
+                startDate = DateHelper.StartOfWeek(date, DayOfWeek.Monday);
                 
                 if (nextPeriod)
                 {
@@ -126,6 +126,12 @@ namespace YouRock
         public static long ShortDate(DateTime date)
         {
             return Convert.ToInt64(date.ToString("yyyyMMddHHmm"));
+        }
+
+        public static DateTime StartOfWeek(DateTime datetime, DayOfWeek startOfWeek)
+        {
+            int diff = (7 + (datetime.DayOfWeek - startOfWeek)) % 7;
+            return datetime.AddDays(-1 * diff).Date;
         }
     }
 }
