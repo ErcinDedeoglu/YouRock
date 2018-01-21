@@ -26,7 +26,7 @@ namespace YouRock
                 {
                     startDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0);
                 }
-                else if (date.Minute > 14 && date.Minute < 31)
+                else if (date.Minute > 14 && date.Minute < 30)
                 {
                     startDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 15, 0);
                 }

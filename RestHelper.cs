@@ -57,7 +57,8 @@ namespace YouRock
                 if (startDate != null)
                 {
                     parameterList.Add("start=" + ((DateTime)startDate).ToString("yyyy") + "-" + ((DateTime)startDate).ToString("MM") + "-" + ((DateTime)startDate).ToString("dd") + "T" + ((DateTime)startDate).ToString("HH") + "%3A" + ((DateTime)startDate).ToString("mm") + "%3A" + ((DateTime)startDate).ToString("ss") + "Z");
-                }
+                    //parameterList.Add("start=2017-01-14T10%3A10%3A10Z");
+                }//'2017-01-14 05:55:00.000'
 
                 parameterList.Add("count=" + count);
                 parameterList.Add("granularity=" + granularity);
