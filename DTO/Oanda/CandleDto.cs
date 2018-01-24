@@ -11,21 +11,21 @@ namespace YouRock.DTO.Oanda
             [JsonProperty(PropertyName = "time")]
             public DateTime Time { get; set; }
             [JsonProperty(PropertyName = "openBid")]
-            public double OpenBid { get; set; }
+            public decimal OpenBid { get; set; }
             [JsonProperty(PropertyName = "openAsk")]
-            public double OpenAsk { get; set; }
+            public decimal OpenAsk { get; set; }
             [JsonProperty(PropertyName = "highBid")]
-            public double HighBid { get; set; }
+            public decimal HighBid { get; set; }
             [JsonProperty(PropertyName = "highAsk")]
-            public double HighAsk { get; set; }
+            public decimal HighAsk { get; set; }
             [JsonProperty(PropertyName = "lowBid")]
-            public double LowBid { get; set; }
+            public decimal LowBid { get; set; }
             [JsonProperty(PropertyName = "lowAsk")]
-            public double LowAsk { get; set; }
+            public decimal LowAsk { get; set; }
             [JsonProperty(PropertyName = "closeBid")]
-            public double CloseBid { get; set; }
+            public decimal CloseBid { get; set; }
             [JsonProperty(PropertyName = "closeAsk")]
-            public double CloseAsk { get; set; }
+            public decimal CloseAsk { get; set; }
             [JsonProperty(PropertyName = "volume")]
             public int Volume { get; set; }
             [JsonProperty(PropertyName = "complete")]
