@@ -49,7 +49,7 @@ namespace YouRock
                 return new List<InstrumentDto>();
             }
 
-            public CandleDto.Root Candles(string instrument = "EUR_USD", DateTime? startDate = null, int count = 5000, string granularity = "S5")
+            public CandleDto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, int count = 5000, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
             {
                 List<string> parameterList = new List<string>();
                 string startDateStr = string.Empty;
@@ -62,7 +62,7 @@ namespace YouRock
 
                 parameterList.Add("count=" + count);
                 parameterList.Add("granularity=" + granularity);
-                parameterList.Add("instrument=" + instrument);
+                parameterList.Add("instrument=" + instrument.DisplayName());
 
                 string responseString = MakeRequest("v1/candles?" + string.Join("&", parameterList));
 
