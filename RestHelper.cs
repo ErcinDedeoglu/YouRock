@@ -49,18 +49,25 @@ namespace YouRock
                 return new List<InstrumentDto>();
             }
 
-            public CandleDto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, int count = 5000, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
+            public CandleDto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, DateTime? endDate = null, int? count = null, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
             {
                 List<string> parameterList = new List<string>();
-                string startDateStr = string.Empty;
 
                 if (startDate != null)
                 {
                     parameterList.Add("start=" + ((DateTime)startDate).ToString("yyyy") + "-" + ((DateTime)startDate).ToString("MM") + "-" + ((DateTime)startDate).ToString("dd") + "T" + ((DateTime)startDate).ToString("HH") + "%3A" + ((DateTime)startDate).ToString("mm") + "%3A" + ((DateTime)startDate).ToString("ss") + "Z");
-                    //parameterList.Add("start=2017-01-14T10%3A10%3A10Z");
-                }//'2017-01-14 05:55:00.000'
+                }
 
-                parameterList.Add("count=" + count);
+                if (endDate != null)
+                {
+                    parameterList.Add("end=" + ((DateTime)endDate).ToString("yyyy") + "-" + ((DateTime)endDate).ToString("MM") + "-" + ((DateTime)endDate).ToString("dd") + "T" + ((DateTime)endDate).ToString("HH") + "%3A" + ((DateTime)endDate).ToString("mm") + "%3A" + ((DateTime)endDate).ToString("ss") + "Z");
+                }
+
+                if (count != null)
+                {
+                    parameterList.Add("count=" + count);
+                }
+
                 parameterList.Add("granularity=" + granularity);
                 parameterList.Add("instrument=" + instrument.DisplayName());
 

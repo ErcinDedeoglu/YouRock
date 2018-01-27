@@ -75,15 +75,21 @@ namespace YouRock
             return new Tuple<decimal, decimal, decimal>(lowerBand, middleBand, upperBand);
         }
 
-        public static decimal RSI(List<CandleDto.Candle> candleList, int day)
+        /// <summary>
+        /// 80 üzerinde olması fiyatların aşırı yükseldiğini ve satılması için uygun bir seviyede olduğunu belirtir.
+        /// 20 altında olması fiyatların aşırı ucuzladığı ve satın alınması için uygun seviye olduğunu belirtir.
+        /// </summary>
+        /// <param name="candleList"></
+        /// param>
+        /// <param name="day"></param>
+        /// <returns></returns>
+        public static Tuple<decimal, int> RSI(List<CandleDto.Candle> candleList, int day)
         {
             DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
             List<decimal> priceList = candleList.Where(a => a.Time > startDate).Select(a => a.CloseBid).ToList();
 
             decimal positiveSum = 0;
-            int positiveCount = 0;
             decimal negativeSum = 0;
-            int negativeCount = 0;
             decimal lastPrice = 0;
 
             for (int i = 0; i < priceList.Count; i++)
@@ -94,12 +100,10 @@ namespace YouRock
                     if (diff > 0)
                     {
                         positiveSum += diff;
-                        positiveCount++;
                     }
                     else if (diff < 0)
                     {
-                        negativeSum += diff;
-                        negativeCount++;
+                        negativeSum += Math.Abs(diff);
                     }
                 }
 
@@ -112,7 +116,7 @@ namespace YouRock
             decimal rs = positiveAverage / negativeAverage;
             decimal rsi = 100 - (100 / (1 + rs));
 
-            return rsi;
+            return new Tuple<decimal, int>(rsi, (int) Math.Round(MathHelper.CalculatePercentage(80, 20, rsi)));
         }
     }
 }
