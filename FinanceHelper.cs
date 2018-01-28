@@ -9,6 +9,7 @@ namespace YouRock
     {
         public static decimal ToStandardPrice(this decimal data)
         {
+            if (data == 0) return 0;
             return Convert.ToDecimal(data.ToString("######.#####"));
         }
 
@@ -60,7 +61,10 @@ namespace YouRock
                 total += (decimal) Math.Sqrt((double) (Math.Abs(priceList[i] - smaX)));
             }
 
-            total = (decimal) Math.Sqrt((double)(total / (priceList.Count - 1)));
+            if (total != 0)
+            {
+                total = (decimal)Math.Sqrt((double)(total / (priceList.Count - 1)));
+            }
 
             return total.ToStandardPrice();
         }
@@ -113,10 +117,10 @@ namespace YouRock
 
             decimal positiveAverage = positiveSum / priceList.Count;
             decimal negativeAverage = negativeSum / priceList.Count;
-            decimal rs = positiveAverage / negativeAverage;
-            decimal rsi = 100 - (100 / (1 + rs));
 
-            return new Tuple<decimal, int>(rsi, (int) Math.Round(MathHelper.CalculatePercentage(80, 20, rsi)));
+            if (positiveAverage == 0 || negativeAverage == 0) return new Tuple<decimal, int>(0, 0);
+            decimal rsi = 100 - (100 / (1 + (positiveAverage / negativeAverage)));
+            return new Tuple<decimal, int>(Convert.ToDecimal(rsi.ToString("######.##")), (int) Math.Round(MathHelper.CalculatePercentage(80, 20, rsi)));
         }
     }
 }

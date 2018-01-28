@@ -51,6 +51,11 @@ namespace YouRock
 
             public CandleDto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, DateTime? endDate = null, int? count = null, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
             {
+                DTO.Oanda.CandleDto.Root result = new CandleDto.Root()
+                {
+                    Candles = new List<CandleDto.Candle>()
+                };
+
                 List<string> parameterList = new List<string>();
 
                 if (startDate != null)
@@ -72,8 +77,14 @@ namespace YouRock
                 parameterList.Add("instrument=" + instrument.DisplayName());
 
                 string responseString = MakeRequest("v1/candles?" + string.Join("&", parameterList));
-
-                return JsonConvert.DeserializeObject<DTO.Oanda.CandleDto.Root>(responseString);
+                if (!string.IsNullOrEmpty(responseString))
+                {
+                    return JsonConvert.DeserializeObject<DTO.Oanda.CandleDto.Root>(responseString);
+                }
+                else
+                {
+                    return result;
+                }
             }
 
             private string MakeRequest(string requestString, string method = "GET", string postData = null)
