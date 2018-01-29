@@ -25,6 +25,13 @@ namespace YouRock.DTO.Oanda
             AUDUSD = 6,
         }
 
+        public enum OrderDirection
+        {
+            Long = 1,
+            Short = 2
+        }
+
+
         public enum Granularity
         {
             S5 = 1,
