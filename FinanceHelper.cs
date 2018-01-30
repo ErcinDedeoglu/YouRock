@@ -13,16 +13,16 @@ namespace YouRock
             return Convert.ToDecimal(data.ToString("######.#####"));
         }
 
-        public static decimal SimpleMovingAverages(List<CandleDto.Candle> candleList, int day)
+        public static decimal SimpleMovingAverages(List<CandleV20Dto.Candle> candleList, int day)
         {
-            DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
-            return candleList.Where(a=> a.Time > startDate).Select(a => a.CloseBid).Average().ToStandardPrice();
+            DateTime startDate = candleList[candleList.Count - 1].time.AddDays(-day);
+            return candleList.Where(a=> a.time > startDate).Select(a => a.bid.c).Average().ToStandardPrice();
         }
 
-        public static decimal WeightedMovingAverage(List<CandleDto.Candle> candleList, int day)
+        public static decimal WeightedMovingAverage(List<CandleV20Dto.Candle> candleList, int day)
         {
-            DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
-            List<decimal> priceList = candleList.Where(a => a.Time > startDate).Select(a => a.CloseBid).ToList();
+            DateTime startDate = candleList[candleList.Count - 1].time.AddDays(-day);
+            List<decimal> priceList = candleList.Where(a => a.time > startDate).Select(a => a.bid.c).ToList();
             decimal x = 0;
             int total = 0;
             for (int i = priceList.Count; i >= 1; i--)
@@ -34,24 +34,24 @@ namespace YouRock
             return (x / total).ToStandardPrice();
         }
 
-        public static decimal ExponentialMovingAverage(List<CandleDto.Candle> candleList, int day)
+        public static decimal ExponentialMovingAverage(List<CandleV20Dto.Candle> candleList, int day)
         {
-            DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
-            List<decimal> priceList = candleList.Where(a => a.Time > startDate).Select(a => a.CloseBid).ToList();
+            DateTime startDate = candleList[candleList.Count - 1].time.AddDays(-day);
+            List<decimal> priceList = candleList.Where(a => a.time > startDate).Select(a => a.bid.c).ToList();
 
             decimal smaX = SimpleMovingAverages(candleList, day);
 
             int k = 2 / (priceList.Count + 1);
-            decimal ema = ((candleList[candleList.Count - 1].CloseBid - smaX) * k) + smaX;
+            decimal ema = ((candleList[candleList.Count - 1].bid.c - smaX) * k) + smaX;
 
 
             return ema.ToStandardPrice();
         }
 
-        public static decimal StandardDeviation(List<CandleDto.Candle> candleList, int day)
+        public static decimal StandardDeviation(List<CandleV20Dto.Candle> candleList, int day)
         {
-            DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
-            List<decimal> priceList = candleList.Where(a => a.Time > startDate).Select(a => a.CloseBid).ToList();
+            DateTime startDate = candleList[candleList.Count - 1].time.AddDays(-day);
+            List<decimal> priceList = candleList.Where(a => a.time > startDate).Select(a => a.bid.c).ToList();
 
             decimal smaX = SimpleMovingAverages(candleList, day);
             decimal total = 0;
@@ -69,7 +69,7 @@ namespace YouRock
             return total.ToStandardPrice();
         }
 
-        public static Tuple<decimal, decimal, decimal> BollingerBands(List<CandleDto.Candle> candleList, int day)
+        public static Tuple<decimal, decimal, decimal> BollingerBands(List<CandleV20Dto.Candle> candleList, int day)
         {
             decimal standardDeviation = StandardDeviation(candleList, day);
             decimal middleBand = SimpleMovingAverages(candleList, day);
@@ -87,10 +87,10 @@ namespace YouRock
         /// param>
         /// <param name="day"></param>
         /// <returns></returns>
-        public static Tuple<decimal, int> RSI(List<CandleDto.Candle> candleList, int day)
+        public static Tuple<decimal, int> RSI(List<CandleV20Dto.Candle> candleList, int day)
         {
-            DateTime startDate = candleList[candleList.Count - 1].Time.AddDays(-day);
-            List<decimal> priceList = candleList.Where(a => a.Time > startDate).Select(a => a.CloseBid).ToList();
+            DateTime startDate = candleList[candleList.Count - 1].time.AddDays(-day);
+            List<decimal> priceList = candleList.Where(a => a.time > startDate).Select(a => a.bid.c).ToList();
 
             decimal positiveSum = 0;
             decimal negativeSum = 0;

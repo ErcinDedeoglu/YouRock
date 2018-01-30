@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace YouRock.DTO.Oanda
 {
-    public class CandleDto
+    public class CandleV1Dto
     {
         public class Candle
         {

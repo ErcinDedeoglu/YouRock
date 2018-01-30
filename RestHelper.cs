@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Runtime.Serialization.Json;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using YouRock.DTO.Oanda;
 
@@ -56,11 +52,11 @@ namespace YouRock
                     return new List<InstrumentDto>();
                 }
 
-                public CandleDto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, DateTime? endDate = null, int? count = null, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
+                public CandleV1Dto.Root Candles(YouRock.DTO.Oanda.Enums.Parity instrument = Enums.Parity.EURUSD, DateTime? startDate = null, DateTime? endDate = null, int? count = null, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
                 {
-                    DTO.Oanda.CandleDto.Root result = new CandleDto.Root()
+                    DTO.Oanda.CandleV1Dto.Root result = new CandleV1Dto.Root()
                     {
-                        Candles = new List<CandleDto.Candle>()
+                        Candles = new List<CandleV1Dto.Candle>()
                     };
 
                     List<string> parameterList = new List<string>();
@@ -86,7 +82,7 @@ namespace YouRock
                     string responseString = MakeRequest("v1/candles?" + string.Join("&", parameterList));
                     if (!string.IsNullOrEmpty(responseString))
                     {
-                        return JsonConvert.DeserializeObject<DTO.Oanda.CandleDto.Root>(responseString);
+                        return JsonConvert.DeserializeObject<DTO.Oanda.CandleV1Dto.Root>(responseString);
                     }
                     else
                     {
@@ -144,60 +140,115 @@ namespace YouRock
                     AccountID = accountID;
 
                     ApiURL = practice ? ApiPracticeServerURL : ApiTradeServerURL;
-                    CreateOrder();
-
-                    //MakeRequest("/v3/accounts/" + AccountID + "/orders", "POST", "{\"order\": {\"units\": \"1\", \"instrument\": \"EUR_USD\", \"timeInForce\": \"FOK\", \"type\": \"MARKET\", \"positionFill\": \"DEFAULT\"}}");
+                    //Candles(Enums.Parity.EURUSD, null, null, 1);
+                    //CreateOrder(Enums.Parity.EURUSD, Enums.OrderDirection.Long);
                 }
 
-                public void CreateOrder(Enums.Parity parity, Enums.OrderDirection orderDirection, int unit = 1)
+                public void CreateOrder(Enums.Parity parity, Enums.OrderDirection orderDirection, decimal? takeProfit = null, decimal? stopLost = null, int unit = 1)
                 {
+                    string method = "v3/accounts/" + AccountID + "/orders";
 
+                    if (orderDirection == Enums.OrderDirection.Short)
+                    {
+                        unit = -unit;
+                    }
 
-                    string x = "v3/accounts/" + AccountID + "/orders";
+                    object takeProfitOnFill = null;
+                    if (takeProfit != null)
+                    {
+                        takeProfitOnFill = new
+                        {
+                            price = ((decimal)takeProfit).ToString("######.######")
+                        };
+                    }
 
-                    object dd = new
+                    object stopLossOnFill = null;
+                    if (stopLost != null)
+                    {
+                        stopLossOnFill = new
+                        {
+                            price = ((decimal)stopLost).ToString("######.######")
+                        };
+                    }
+
+                    string result = MakeRequest(method, Enums.MethodType.Post, new
                     {
                         order = new
                         {
                             type = "MARKET",
-                            instrument = "EUR_USD",
-                            units = "1",
+                            instrument = parity.DisplayName(),
+                            units = unit.ToString(),
                             timeInForce = "FOK",
-                            takeProfitOnFill = new
-                            {
-                                price = "1.25000"
-                            },
-                            stopLossOnFill = new
-                            {
-                                price = "1.20000"
-                            }
+                            takeProfitOnFill = takeProfitOnFill,
+                            stopLossOnFill = stopLossOnFill
                         }
-                    };
-
-                    var s = MakeRequest(x);
+                    });
                 }
 
-                private string MakeRequest(string request, string data)
+                public CandleV20Dto.Root Candles(Enums.Parity instrument, DateTime? startDate = null, DateTime? endDate = null, int? count = null, YouRock.DTO.Oanda.Enums.Granularity granularity = Enums.Granularity.S5)
                 {
+
+                    List<string> parameterList = new List<string>();
+
+                    if (startDate != null)
+                    {
+                        parameterList.Add("from=" + ((DateTime)startDate).ToString("yyyy") + "-" + ((DateTime)startDate).ToString("MM") + "-" + ((DateTime)startDate).ToString("dd") + "T" + ((DateTime)startDate).ToString("HH") + "%3A" + ((DateTime)startDate).ToString("mm") + "%3A" + ((DateTime)startDate).ToString("ss") + "Z");
+                    }
+
+                    if (endDate != null)
+                    {
+                        parameterList.Add("to=" + ((DateTime)endDate).ToString("yyyy") + "-" + ((DateTime)endDate).ToString("MM") + "-" + ((DateTime)endDate).ToString("dd") + "T" + ((DateTime)endDate).ToString("HH") + "%3A" + ((DateTime)endDate).ToString("mm") + "%3A" + ((DateTime)endDate).ToString("ss") + "Z");
+                    }
+
+                    if (count != null)
+                    {
+                        parameterList.Add("count=" + count);
+                    }
+
+                    parameterList.Add("granularity=" + granularity);
+                    parameterList.Add("price=MBA");
+                    //parameterList.Add("instrument=" + instrument.DisplayName());
+
+                    string method = "v3/instruments/" + instrument.DisplayName() + "/candles?" + string.Join("&", parameterList);
+
+                    string candlesJson = MakeRequest(method, Enums.MethodType.Get, null);
+                    CandleV20Dto.Root candleV20 = JsonConvert.DeserializeObject<CandleV20Dto.Root>(candlesJson);
+
+                    return candleV20;
+                }
+
+                public void InstrumentStream()
+                {
+
+                }
+
+                private string MakeRequest(string request, Enums.MethodType methodType, object data = null)
+                {
+                    string result;
+
                     HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(ApiURL + request);
                     httpWebRequest.ContentType = "application/json";
-                    httpWebRequest.Method = "POST";
+                    httpWebRequest.Method = methodType.DisplayName();
                     httpWebRequest.Headers.Add("Authorization", "Bearer " + AccessToken);
                     httpWebRequest.Headers[HttpRequestHeader.AcceptEncoding] = "gzip, deflate";
+                    httpWebRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
-                    using (StreamWriter streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+                    if (methodType == Enums.MethodType.Post)
                     {
-                        string json = JsonConvert.SerializeObject(data);
-                        streamWriter.Write(json);
+                        using (StreamWriter streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+                        {
+                            string json = JsonConvert.SerializeObject(data);
+                            streamWriter.Write(json);
+                        }
                     }
 
                     HttpWebResponse httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
                     using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                     {
-                        string result = streamReader.ReadToEnd();
+                        result = streamReader.ReadToEnd();
                     }
 
-                    return null;
+                    return result;
                 }
 
                 //private string MakeRequest(string requestString, string method = "GET", Dictionary<string, string> requestParams = null)

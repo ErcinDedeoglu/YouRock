@@ -31,7 +31,6 @@ namespace YouRock.DTO.Oanda
             Short = 2
         }
 
-
         public enum Granularity
         {
             S5 = 1,
@@ -56,6 +55,14 @@ namespace YouRock.DTO.Oanda
             D = 20,
             W = 21,
             M = 22
+        }
+
+        public enum MethodType
+        {
+            [Display(Name = "POST")]
+            Post = 1,
+            [Display(Name = "GET")]
+            Get = 2
         }
     }
 }
