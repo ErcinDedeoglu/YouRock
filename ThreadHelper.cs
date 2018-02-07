@@ -23,12 +23,17 @@ namespace YouRock
             bigStackThread.Start();
         }
 
-        public static void ExecuteThread(Action action)
+        public static void ExecuteThread(Action action, bool join = false)
         {
             try
             {
                 Thread bigStackThread = new Thread(() => action(), 1024 * 1024);
                 bigStackThread.Start();
+
+                if (join)
+                {
+                    bigStackThread.Join();
+                }
             }
             catch
             {

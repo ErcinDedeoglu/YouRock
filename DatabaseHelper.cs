@@ -88,11 +88,21 @@ namespace YouRock
         {
             public DatabaseSynchronization()
             {
+                if (YouRock.DTO.CommonStatic.Database.SQLConnectionMaster.State == ConnectionState.Closed)
+                {
+                    YouRock.DTO.CommonStatic.Database.SQLConnectionMaster.Open();
+                }
+
                 ExecuteDatabaseCreateScript();
                 ExecuteStoredProcedures();
                 ExecuteChangeScripts();
                 ExecuteInserts();
                 ExecuteViews();
+
+                if (YouRock.DTO.CommonStatic.Database.SQLConnectionMaster.State == ConnectionState.Closed)
+                {
+                    YouRock.DTO.CommonStatic.Database.SQLConnection.Open();
+                }
             }
             
             public List<string> ChangeScripts()
