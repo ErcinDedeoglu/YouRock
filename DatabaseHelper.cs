@@ -99,7 +99,7 @@ namespace YouRock
                 ExecuteInserts();
                 ExecuteViews();
 
-                if (YouRock.DTO.CommonStatic.Database.SQLConnectionMaster.State == ConnectionState.Closed)
+                if (YouRock.DTO.CommonStatic.Database.SQLConnection.State == ConnectionState.Closed)
                 {
                     YouRock.DTO.CommonStatic.Database.SQLConnection.Open();
                 }

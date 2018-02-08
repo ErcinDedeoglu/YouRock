@@ -7,7 +7,7 @@ namespace YouRock
     {
         public static void Set<T>(this ISession session, string key, T value)
         {
-            if ((typeof(T) == typeof(int?) || typeof(T) == typeof(int)) && value != null)
+            if ((typeof(T) == typeof(int?) || typeof(T) == typeof(int)) && value != null || value != null && value.GetType().IsEnum)
             {
                 session.SetInt32(key, (int)(object)value);
             }
@@ -21,7 +21,7 @@ namespace YouRock
         {
             object result = null;
 
-            if (typeof(T) == typeof(int?) || typeof(T) == typeof(int))
+            if (typeof(T) == typeof(int?) || typeof(T) == typeof(int) || typeof(T).IsEnum)
             {
                 result = session.GetInt32(key);
             }
